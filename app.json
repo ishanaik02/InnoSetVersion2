@@ -1,0 +1,92 @@
+{
+  "expo": {
+    "name": "InnoSet",
+    "slug": "innoset",
+    "version": "3.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.innovativeengineers.innoset",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We need your location to track trip distance for TA/DA calculation.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "We need your location in the background to keep tracking your trip route.",
+        "NSCameraUsageDescription": "Allow InnoSet to use your camera to photograph receipts and bills.",
+        "NSPhotoLibraryUsageDescription": "Allow InnoSet to access your photos to attach receipts and bills.",
+        "UIBackgroundModes": [
+          "location"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.innovativeengineers.innoset",
+      "versionCode": 4,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ],
+      "blockedPermissions": [
+        "RECORD_AUDIO",
+        "SYSTEM_ALERT_WINDOW",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "READ_MEDIA_VIDEO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to track trips.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to attach receipts and bills.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use your camera to photograph receipts and bills."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "buildToolsVersion": "36.0.0",
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "packagingOptions": {
+              "jniLibs": {
+                "useLegacyPackaging": false
+              }
+            },
+            "enableMinifyInReleaseBuilds": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2b23e8e0-7c40-40c4-8767-f56836a993ba"
+      }
+    },
+    "owner": "virendrajaats-team"
+  }
+}

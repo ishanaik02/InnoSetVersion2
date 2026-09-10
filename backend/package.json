@@ -1,0 +1,29 @@
+{
+  "name": "service-engineer-trip-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "create-admin": "node scripts/createAdmin.js",
+    "seed-branches": "node scripts/seedBranches.js",
+    "migrate-data": "node scripts/migrateExistingData.js",
+    "seed-users": "node scripts/seedUsers.js",
+    "test-models": "node scripts/testModels.js",
+    "setup-db": "node -e \"require('./scripts/seedBranches.js')().then(() => require('./scripts/migrateExistingData.js')()).then(() => require('./scripts/seedUsers.js')())\""
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.4.0",
+    "multer": "^2.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
