@@ -1,7 +1,30 @@
 const Trip = require("../models/Trip");
 const User = require("../models/User");
+const TADABill = require("../models/TADABill");
+const BillApproval = require("../models/BillApproval");
+const Branch = require("../models/Branch");
 const { calculateTaDa } = require("../utils/taDaCalculator");
 const { calculateDaAmount } = require("../utils/policyRates");
+
+// Hard cap on points accepted per batch write. The app's upload worker
+// (backgroundLocationService.js UPLOAD_BATCH_SIZE) sends exactly 500 points
+// per request, so this never truncates legitimate traffic — it only stops a
+// buggy or hostile client from pushing unbounded arrays into one document
+// (M8/H4 in PRODUCTION_RED_FLAGS.md).
+const MAX_POINTS_PER_BATCH = 500;
+
+// Generate bill number: {BranchCode}-TA-{Year}-{000001}
+async function generateBillNumber(branchId) {
+  const branch = await Branch.findById(branchId);
+  if (!branch) throw new Error('Branch not found');
+  const year = new Date().getFullYear();
+  const prefix = `${branch.code}-TA-${year}-`;
+  const count = await TADABill.countDocuments({
+    billNumber: { $regex: `^${prefix}` },
+  });
+  const seq = String(count + 1).padStart(6, '0');
+  return `${prefix}${seq}`;
+}
 
 exports.createTrip = async (req, res) => {
   try {
@@ -107,6 +130,24 @@ exports.uploadLocationBatch = async (req, res) => {
         const { id } = req.params;
 
         const { points } = req.body;
+
+        if (!Array.isArray(points) || points.length === 0) {
+
+            return res.status(400).json({ success: false, message: "points array is required" });
+
+        }
+
+        if (points.length > MAX_POINTS_PER_BATCH) {
+
+            return res.status(413).json({
+
+                success: false,
+
+                message: `Batch too large: max ${MAX_POINTS_PER_BATCH} points per request, received ${points.length}`,
+
+            });
+
+        }
 
         const trip = await Trip.findById(id);
 
@@ -315,6 +356,10 @@ exports.updateTrip = async (req, res) => {
       "dailyAllowance",
       "numberOfDays",
       "tracking",
+      "taDaAmount",
+      "daAmount",
+      "stayExpensesTotal",
+      "grandTotal",
     ];
     allowedFields.forEach((f) => {
       if (req.body[f] !== undefined) trip[f] = req.body[f];
@@ -408,13 +453,100 @@ exports.getTripById = async (req, res) => {
 
 exports.submitTrip = async (req, res) => {
   try {
-    const trip = await Trip.findOneAndUpdate(
-      { _id: req.params.id, engineer: req.userId },
-      { status: "submitted" },
-      { new: true },
-    );
+    // Find the full trip first so we have all amounts for bill creation
+    const trip = await Trip.findOne({
+      _id: req.params.id,
+      engineer: req.userId,
+    });
     if (!trip) return res.status(404).json({ message: "Trip not found" });
-    res.json({ trip, message: "Trip submitted for approval" });
+
+    if (["submitted", "approved", "rejected", "approved_by_bm", "approved_by_hr", "approved_by_sh", "paid"].includes(trip.status)) {
+      return res.status(400).json({ message: "Trip already submitted or processed" });
+    }
+
+    // Recalculate TA/DA from trip data to ensure amounts are correct
+    const engineer = await User.findById(trip.engineer).select("grade name role");
+    const totalDistance =
+      (trip.outboundDistanceKm || 0) + (trip.returnDistanceKm || 0) + (trip.additionalKm || 0);
+    const { amount: taDaAmount } = calculateTaDa(
+      trip.conveyance,
+      totalDistance,
+      trip.ticketAmount,
+      engineer?.grade,
+    );
+    const daAmount = calculateDaAmount({
+      distanceKm: totalDistance,
+      isLocalVisit: trip.isLocalVisit,
+      tripType: trip.tripType,
+    });
+    const stayTotal = trip.stayExpensesTotal || 0;
+    const grandTotal = taDaAmount + daAmount + stayTotal;
+
+    // Update trip amounts and status
+    trip.taDaAmount = taDaAmount;
+    trip.daAmount = daAmount;
+    trip.grandTotal = grandTotal;
+    trip.status = "submitted";
+    await trip.save();
+
+    // ── Auto-create TA/DA Bill ──
+    let bill = null;
+    if (trip.branch) {
+      const billNumber = await generateBillNumber(trip.branch);
+
+      bill = await TADABill.create({
+        trip: trip._id,
+        employee: req.userId,
+        branch: trip.branch,
+        billNumber,
+        billDate: new Date(),
+        totalAmount: grandTotal,
+        conveyanceAmount: taDaAmount,
+        daAmount: daAmount,
+        stayAmount: stayTotal,
+        otherAmount: 0,
+        status: 'submitted',
+      });
+
+      // Find the Branch Manager in this branch as the first approver
+      const bm = await User.findOne({
+        branch: trip.branch,
+        role: 'branch_manager',
+        isActive: true,
+      });
+
+      if (bm) {
+        bill.currentApprover = bm._id;
+      }
+
+      bill.approvalHistory.push({
+        approver: req.userId,
+        approverName: engineer?.name || 'Engineer',
+        approverRole: engineer?.role || 'service_engineer',
+        action: 'submitted',
+        remarks: 'Auto-generated from trip submission',
+        timestamp: new Date(),
+      });
+      await bill.save();
+
+      // Create audit trail record
+      await BillApproval.create({
+        bill: bill._id,
+        approver: req.userId,
+        action: 'submitted',
+        previousStatus: 'draft',
+        newStatus: 'submitted',
+        remarks: 'Auto-generated from trip submission',
+      });
+    }
+
+    res.json({
+      trip,
+      bill,
+      message: bill
+        ? "Trip submitted and TA/DA bill auto-created for approval"
+        : "Trip submitted for approval",
+    });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
@@ -507,7 +639,14 @@ exports.getReceiptFile = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const trips = await Trip.find({ engineer: req.userId });
+    // Projection: this endpoint runs on every dashboard open and needs only
+    // three numeric fields. Without it, every engineer's FULL trip documents —
+    // including thousands of embedded GPS points and receipt metadata — were
+    // loaded per request (H1/H4 in PRODUCTION_RED_FLAGS.md).
+    const trips = await Trip.find(
+      { engineer: req.userId },
+      "status outboundDistanceKm returnDistanceKm",
+    ).lean();
     const totalTrips = trips.filter((t) =>
       ["completed", "submitted", "approved"].includes(t.status),
     ).length;

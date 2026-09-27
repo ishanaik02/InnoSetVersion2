@@ -173,7 +173,7 @@ async function main() {
         email,
         passwordHash,
         grade,
-        role: 'engineer',
+        role: 'service_engineer',
       });
       created.push({ employeeId: user.employeeId, name: user.name, email: user.email || '', grade: user.grade, password });
       console.log(`  ✓ Created ${employeeId} (${name})`);

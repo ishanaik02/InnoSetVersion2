@@ -43,7 +43,7 @@ export default function HRAttendanceScreen({ navigation }) {
       } else {
         data = await getBranchAttendance(params);
       }
-      setRecords(data.attendance || []);
+      setRecords(data.records || []);
     } catch (e) {
       Alert.alert('Error', 'Failed to load attendance records.');
     } finally {
@@ -114,7 +114,7 @@ export default function HRAttendanceScreen({ navigation }) {
             setLoading(true);
             try {
               const ids = pendingList.map(r => r._id);
-              await bulkApproveAttendance({ attendanceIds: ids });
+              await bulkApproveAttendance({ ids });
               Alert.alert('Success', `Approved ${ids.length} records.`);
               fetchAttendance();
             } catch (e) {
@@ -168,9 +168,9 @@ export default function HRAttendanceScreen({ navigation }) {
         {item.status === 'present' && (
           <View style={styles.detailBox}>
             <Text style={styles.detailText}>
-              🕒 Punched at: {item.punchInTime ? new Date(item.punchInTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'}
+              🕒 Marked at: {item.markedAt ? new Date(item.markedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'}
             </Text>
-            {item.isLate && <Text style={styles.lateWarning}>⚠️ Marked after 9:30 AM cutoff</Text>}
+            {!item.markedBeforeCutoff && <Text style={styles.lateWarning}>⚠️ Marked after 9:30 AM cutoff</Text>}
           </View>
         )}
 

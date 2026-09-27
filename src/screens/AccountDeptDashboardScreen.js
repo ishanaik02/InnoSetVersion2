@@ -106,8 +106,8 @@ export default function AccountDeptDashboardScreen({ navigation }) {
         {/* Breakdown row */}
         <View style={styles.breakdownRow}>
           <Text style={styles.breakdownText}>Conveyance: ₹{item.conveyanceAmount || 0}</Text>
-          <Text style={styles.breakdownText}>DA: ₹{item.dailyAllowanceAmount || 0}</Text>
-          <Text style={styles.breakdownText}>Stay: ₹{item.stayAllowanceAmount || 0}</Text>
+          <Text style={styles.breakdownText}>DA: ₹{item.daAmount || 0}</Text>
+          <Text style={styles.breakdownText}>Stay: ₹{item.stayAmount || 0}</Text>
         </View>
 
         <View style={styles.footerRow}>
@@ -117,18 +117,20 @@ export default function AccountDeptDashboardScreen({ navigation }) {
             </Text>
           </View>
 
-          {isApproved ? (
-            <TouchableOpacity style={styles.payBtn} onPress={() => handleOpenPayModal(item)}>
-              <Text style={styles.payBtnText}>💰 Mark Paid</Text>
-            </TouchableOpacity>
-          ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity
-              style={styles.detailBtn}
-              onPress={() => navigation.navigate('BillDetail', { id: item._id })}
+              style={[styles.detailBtn, { marginRight: isApproved ? spacing.xs : 0 }]}
+              onPress={() => navigation.navigate('BillDetail', { billId: item._id })}
             >
-              <Text style={styles.detailBtnText}>View Details</Text>
+              <Text style={styles.detailBtnText}>{isApproved ? 'View / Print' : 'View Details'}</Text>
             </TouchableOpacity>
-          )}
+
+            {isApproved && (
+              <TouchableOpacity style={styles.payBtn} onPress={() => handleOpenPayModal(item)}>
+                <Text style={styles.payBtnText}>💰 Mark Paid</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
     );

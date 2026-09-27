@@ -53,7 +53,7 @@ export default function HRDashboardScreen({ navigation }) {
       setPendingBillCount(billData.bills?.length || 0);
       setPendingAttCount(attData.count || 0);
 
-      const records = todayAttData.attendance || [];
+      const records = todayAttData.records || [];
       const present = records.filter(r => r.status === 'present').length;
       const leave = records.filter(r => r.status === 'leave').length;
       const onDuty = records.filter(r => r.status === 'on_duty').length;

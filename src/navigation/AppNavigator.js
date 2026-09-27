@@ -20,7 +20,6 @@ import EngineerTripDetailScreen from '../screens/EngineerTripDetailScreen';
 
 // Bill Screens
 import BillsScreen from '../screens/BillsScreen';
-import NewBillScreen from '../screens/NewBillScreen';
 import BillDetailScreen from '../screens/BillDetailScreen';
 import BillApprovalScreen from '../screens/BillApprovalScreen';
 import EditBillAmountsScreen from '../screens/EditBillAmountsScreen';
@@ -67,7 +66,6 @@ function EngineerStack() {
         <Stack.Screen name="PastTrips" component={PastTripsScreen} options={{ title: 'Past Trips' }} />
         <Stack.Screen name="EngineerTripDetail" component={EngineerTripDetailScreen} options={{ title: 'Trip Details' }} />
         <Stack.Screen name="Bills" component={BillsScreen} options={{ title: 'TA/DA Bills' }} />
-        <Stack.Screen name="NewBill" component={NewBillScreen} options={{ title: 'Raise TA/DA Bill' }} />
         <Stack.Screen name="BillDetail" component={BillDetailScreen} options={{ title: 'Bill Details' }} />
         <Stack.Screen name="Attendance" component={AttendanceScreen} options={{ title: 'Daily Attendance' }} />
         <Stack.Screen name="AttendanceHistory" component={AttendanceHistoryScreen} options={{ title: 'Attendance History' }} />

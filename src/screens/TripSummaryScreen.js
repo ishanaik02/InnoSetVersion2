@@ -128,9 +128,12 @@ export default function TripSummaryScreen({ navigation }) {
         await submitTrip(activeTrip.id);
       }
 
-      Alert.alert('Submitted', 'Trip report and reimbursement request sent for approval.');
-      resetTrip();
-      navigation.navigate('Dashboard');
+      Alert.alert(
+        'Submitted',
+        'Trip report sent for approval.\nA TA/DA bill has been automatically created and is now with your Branch Manager for review.',
+        [{ text: 'OK', onPress: () => { resetTrip(); navigation.navigate('Dashboard'); } }],
+      );
+      return;
     } catch (e) {
       // Save the full trip payload so it can be submitted automatically
       // when connectivity is restored.
@@ -283,7 +286,7 @@ export default function TripSummaryScreen({ navigation }) {
       </Card>
 
       <AppButton
-        title="Submit Trip Report & Reimbursement"
+        title="Submit Trip & Create TA/DA Bill"
         onPress={handleSubmit}
         loading={submitting}
         style={{ marginVertical: spacing.lg }}

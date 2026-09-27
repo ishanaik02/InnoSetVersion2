@@ -87,7 +87,7 @@ export default function BillsScreen({ navigation }) {
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>🧾</Text>
             <Text style={styles.emptyTitle}>No Bills Yet</Text>
-            <Text style={styles.emptySubtitle}>Raise a TA/DA bill from a completed trip.</Text>
+            <Text style={styles.emptySubtitle}>Bills are created automatically when you submit a trip.</Text>
           </View>
         }
         contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xl }}
@@ -99,14 +99,7 @@ export default function BillsScreen({ navigation }) {
         )}
       />
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('NewBill')}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.fabText}>+ New Bill</Text>
-      </TouchableOpacity>
+
     </View>
   );
 }
@@ -145,20 +138,4 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48, marginBottom: spacing.md },
   emptyTitle: { ...typography.h2, marginBottom: spacing.xs },
   emptySubtitle: { color: colors.textMuted, textAlign: 'center' },
-
-  fab: {
-    position: 'absolute',
-    bottom: spacing.xl,
-    right: spacing.md,
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.4,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  fabText: { color: colors.white, fontWeight: '700', fontSize: 15 },
 });

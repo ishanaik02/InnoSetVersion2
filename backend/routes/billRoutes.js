@@ -15,6 +15,7 @@ const {
   editBillAmounts,
   markBillPaid,
   getBillHistory,
+  getBillPrint,
 } = require('../controllers/billController');
 
 router.use(auth);
@@ -72,5 +73,8 @@ router.post(
 
 // History / audit
 router.get('/:id/history', getBillHistory);
+
+// Printable bill data
+router.get('/:id/print', getBillPrint);
 
 module.exports = router;

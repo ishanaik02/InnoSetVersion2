@@ -9,6 +9,11 @@ async function connectDB() {
     process.exit(1);
   }
   try {
+    // MONGO_DEBUG=true logs every query — used by costPassTest.js to count
+    // actual DB reads, and handy for ops debugging.
+    if (process.env.MONGO_DEBUG === 'true') {
+      mongoose.set('debug', true);
+    }
     await mongoose.connect(uri);
     // Never log the full URI — it contains the DB credentials.
     const safeHost = uri.split('@')[1]?.split('/')[0] || 'database';

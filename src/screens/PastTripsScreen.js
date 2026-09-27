@@ -9,9 +9,13 @@ import { RESUMABLE_STATUSES, DELETABLE_STATUSES } from '../utils/tripStage';
 import { colors, spacing, typography, radius } from '../theme/theme';
 
 const STATUS_COLORS = {
-  submitted: colors.success,
+  submitted: colors.warning,
+  approved_by_bm: '#6C63FF',
+  approved_by_hr: colors.primary,
+  approved_by_sh: '#00A878',
   approved: colors.success,
   rejected: colors.danger,
+  paid: '#1A7A4A',
   completed: colors.warning,
   in_progress: colors.primary,
   at_site: colors.primary,
@@ -19,11 +23,16 @@ const STATUS_COLORS = {
   draft: colors.textMuted,
 };
 
-// What each unsubmitted status actually means to the engineer, since "draft"
-// and "in_progress" aren't self-explanatory on their own.
-function unsubmittedHint(status) {
+// What each status actually means to the engineer
+function statusHint(status) {
   if (status === 'draft') return 'Not started yet — tap to begin or delete it.';
   if (status === 'completed') return 'Tracking done — tap to review and submit for reimbursement.';
+  if (status === 'submitted') return 'Submitted — bill pending Branch Manager approval.';
+  if (status === 'approved_by_bm') return 'BM approved — pending HR review.';
+  if (status === 'approved_by_hr') return 'HR approved — pending Service Head approval.';
+  if (status === 'approved') return 'Fully approved — pending payment by Accounts.';
+  if (status === 'paid') return 'Paid! Reimbursement processed.';
+  if (status === 'rejected') return 'Rejected — tap to view details.';
   return 'Trip in progress — tap to continue.';
 }
 
@@ -153,7 +162,7 @@ export default function PastTripsScreen({ navigation }) {
               )}
               {isUnsubmitted ? (
                 <View style={styles.unsubmittedRow}>
-                  <Text style={styles.detailsLink}>{busy ? 'Working…' : unsubmittedHint(item.status)}</Text>
+                  <Text style={styles.detailsLink}>{busy ? 'Working…' : statusHint(item.status)}</Text>
                   <Pressable
                     onPress={() => handleDeleteTrip(item)}
                     disabled={busy}
@@ -164,7 +173,18 @@ export default function PastTripsScreen({ navigation }) {
                   </Pressable>
                 </View>
               ) : (
-                <Text style={styles.detailsLink}>Tap to view details</Text>
+                <View style={styles.unsubmittedRow}>
+                  <Text style={styles.detailsLink}>{statusHint(item.status)}</Text>
+                  {['submitted', 'approved_by_bm', 'approved_by_hr', 'approved', 'paid'].includes(item.status) && (
+                    <Pressable
+                      onPress={() => navigation.navigate('Bills')}
+                      hitSlop={8}
+                      style={styles.billLink}
+                    >
+                      <Text style={styles.billLinkText}>View Bill →</Text>
+                    </Pressable>
+                  )}
+                </View>
               )}
             </Card>
           </Pressable>
@@ -187,4 +207,6 @@ const styles = StyleSheet.create({
   unsubmittedRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm },
   deleteButton: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.danger },
   deleteButtonText: { color: colors.danger, fontSize: 12, fontWeight: '700' },
+  billLink: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, backgroundColor: colors.primaryLight },
+  billLinkText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
 });

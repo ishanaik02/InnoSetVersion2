@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { colors, spacing, radius, typography } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
-import { getBillById, submitBill, approveBill, rejectBill, markBillPaid } from '../services/billService';
+import { getBillById, submitBill, approveBill, rejectBill, markBillPaid, getBillPrint } from '../services/billService';
+import RNPrint from 'react-native-print';
+
 
 const STATUS_CONFIG = {
   draft:           { label: 'Draft',            color: colors.textMuted  },
@@ -77,8 +79,140 @@ function HistoryItem({ item }) {
   );
 }
 
+function buildPrintHTML(data) {
+  const emp = data.employee || {};
+  const branch = data.branch || {};
+  const trip = data.trip || {};
+  const amounts = data.amounts || {};
+  const history = data.approvalHistory || [];
+
+  const historyRows = history.map(h =>
+    `<tr>
+      <td>${h.action?.toUpperCase() || ''}</td>
+      <td>${h.approver || '—'}</td>
+      <td>${h.role || '—'}</td>
+      <td>${h.remarks || '—'}</td>
+      <td>${h.timestamp || '—'}</td>
+    </tr>`
+  ).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TA/DA Bill - ${data.billNumber || ''}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a2e; padding: 24px; font-size: 13px; }
+    .header { text-align: center; border-bottom: 3px solid #0F4C81; padding-bottom: 16px; margin-bottom: 20px; }
+    .header h1 { font-size: 22px; color: #0F4C81; margin-bottom: 4px; }
+    .header h2 { font-size: 14px; color: #555; font-weight: 500; }
+    .bill-meta { display: flex; justify-content: space-between; margin-bottom: 16px; }
+    .bill-meta .left, .bill-meta .right { width: 48%; }
+    .bill-meta .label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .bill-meta .value { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+    .section { margin-bottom: 20px; }
+    .section-title { font-size: 14px; font-weight: 700; color: #0F4C81; border-bottom: 1px solid #ddd; padding-bottom: 4px; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    table th, table td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; font-size: 12px; }
+    table th { background-color: #f0f4f8; font-weight: 700; color: #333; }
+    .amount-table td:last-child { text-align: right; font-weight: 600; }
+    .total-row { background-color: #e8f4e8; font-weight: 800; }
+    .total-row td { font-size: 14px; }
+    .approved-row { background-color: #d4edda; }
+    .status-badge { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; color: white; }
+    .status-approved { background-color: #28a745; }
+    .status-paid { background-color: #1A7A4A; }
+    .status-rejected { background-color: #dc3545; }
+    .status-default { background-color: #6c757d; }
+    .signatures { display: flex; justify-content: space-between; margin-top: 48px; }
+    .sig-box { text-align: center; width: 30%; }
+    .sig-line { border-top: 1px solid #333; margin-top: 48px; padding-top: 6px; font-size: 11px; color: #555; }
+    .footer { text-align: center; margin-top: 24px; color: #999; font-size: 10px; border-top: 1px solid #eee; padding-top: 12px; }
+    @media print { body { padding: 12px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>INNOSET — TA/DA Bill</h1>
+    <h2>${branch.name || 'Branch'} ${branch.code ? '(' + branch.code + ')' : ''}</h2>
+  </div>
+
+  <div class="bill-meta">
+    <div class="left">
+      <div class="label">Bill Number</div>
+      <div class="value">${data.billNumber || '—'}</div>
+      <div class="label">Issue Date</div>
+      <div class="value">${data.issueDate || '—'}</div>
+      <div class="label">Status</div>
+      <div class="value">
+        <span class="status-badge ${data.status === 'approved' ? 'status-approved' : data.status === 'paid' ? 'status-paid' : data.status === 'rejected' ? 'status-rejected' : 'status-default'}">
+          ${(data.status || '').toUpperCase().replace(/_/g, ' ')}
+        </span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="label">Employee Name</div>
+      <div class="value">${emp.name || '—'}</div>
+      <div class="label">Employee ID</div>
+      <div class="value">${emp.employeeId || '—'}</div>
+      <div class="label">Grade</div>
+      <div class="value">${emp.grade || '—'}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Trip Details</div>
+    <table>
+      <tr><th>Route</th><td>${trip.startLocation || '—'} → ${trip.destination || '—'}</td></tr>
+      <tr><th>Trip Date</th><td>${trip.date || '—'}</td></tr>
+      <tr><th>Trip Type</th><td>${(trip.tripType || '—').toUpperCase()}</td></tr>
+      <tr><th>Conveyance</th><td>${(trip.conveyance || '—').toUpperCase()}</td></tr>
+      <tr><th>Distance (km)</th><td>${trip.distanceKm || 0}</td></tr>
+      ${trip.ticketAmount ? `<tr><th>Ticket Amount</th><td>₹${trip.ticketAmount.toLocaleString('en-IN')}</td></tr>` : ''}
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Expense Breakdown</div>
+    <table class="amount-table">
+      <thead><tr><th>Component</th><th>Amount (₹)</th></tr></thead>
+      <tbody>
+        <tr><td>Conveyance / Travel (TA)</td><td>₹${(amounts.conveyance || 0).toLocaleString('en-IN')}</td></tr>
+        <tr><td>Daily Allowance (DA)</td><td>₹${(amounts.dailyAllowance || 0).toLocaleString('en-IN')}</td></tr>
+        <tr><td>Stay / Lodging</td><td>₹${(amounts.stay || 0).toLocaleString('en-IN')}</td></tr>
+        <tr><td>Other Expenses${amounts.otherDescription ? ' — ' + amounts.otherDescription : ''}</td><td>₹${(amounts.other || 0).toLocaleString('en-IN')}</td></tr>
+        <tr class="total-row"><td><strong>Total Claimed</strong></td><td><strong>₹${(amounts.total || 0).toLocaleString('en-IN')}</strong></td></tr>
+        ${amounts.approvedAmount != null ? `<tr class="approved-row"><td><strong>Approved Amount</strong></td><td><strong>₹${amounts.approvedAmount.toLocaleString('en-IN')}</strong></td></tr>` : ''}
+      </tbody>
+    </table>
+  </div>
+
+  ${history.length > 0 ? `
+  <div class="section">
+    <div class="section-title">Approval History</div>
+    <table>
+      <thead><tr><th>Action</th><th>By</th><th>Role</th><th>Remarks</th><th>Date/Time</th></tr></thead>
+      <tbody>${historyRows}</tbody>
+    </table>
+  </div>` : ''}
+
+  <div class="signatures">
+    <div class="sig-box"><div class="sig-line">Employee Signature</div></div>
+    <div class="sig-box"><div class="sig-line">Service Head</div></div>
+    <div class="sig-box"><div class="sig-line">Accounts Dept</div></div>
+  </div>
+
+  <div class="footer">
+    This is a computer-generated document. Printed on ${new Date().toLocaleString('en-IN')}.
+  </div>
+</body>
+</html>`;
+}
+
 export default function BillDetailScreen({ route, navigation }) {
-  const { billId } = route.params;
+  const billId = route.params?.billId || route.params?.id;
   const { user } = useAuth();
   const [bill, setBill] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -181,6 +315,21 @@ export default function BillDetailScreen({ route, navigation }) {
     ]);
   };
 
+  const handlePrint = async () => {
+    setActionLoading(true);
+    try {
+      const printData = await getBillPrint(billId);
+      const html = buildPrintHTML(printData);
+      await RNPrint.print({ html });
+    } catch (e) {
+      if (e?.message !== 'User cancelled') {
+        Alert.alert('Print Error', 'Could not open printer. Try again.');
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
   if (!bill) return <View style={styles.center}><Text>Bill not found</Text></View>;
 
@@ -195,6 +344,7 @@ export default function BillDetailScreen({ route, navigation }) {
   const canReject = canApprove && !['draft', 'approved', 'paid'].includes(bill.status);
   const canPay = user?.role === 'account_dept' && bill.status === 'approved';
   const canEditAmounts = user?.role === 'service_head' && bill.status === 'approved_by_hr';
+  const canPrint = bill.status === 'approved' || bill.status === 'paid';
 
   return (
     <ScrollView
@@ -247,7 +397,7 @@ export default function BillDetailScreen({ route, navigation }) {
       )}
 
       {/* Action Buttons */}
-      {(canSubmit || canApprove || canPay || canEditAmounts) && (
+      {(canSubmit || canApprove || canPay || canEditAmounts || canPrint) && (
         <View style={styles.actions}>
           {canSubmit && (
             <TouchableOpacity style={styles.primaryBtn} onPress={handleSubmit} disabled={actionLoading}>
@@ -275,6 +425,19 @@ export default function BillDetailScreen({ route, navigation }) {
           {canPay && (
             <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.success }]} onPress={handlePay} disabled={actionLoading}>
               <Text style={styles.primaryBtnText}>💳 Mark as Paid</Text>
+            </TouchableOpacity>
+          )}
+          {canPrint && (
+            <TouchableOpacity
+              style={[styles.primaryBtn, { backgroundColor: '#0F4C81' }]}
+              onPress={handlePrint}
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.primaryBtnText}>🖨️ Print / Save PDF</Text>
+              )}
             </TouchableOpacity>
           )}
         </View>

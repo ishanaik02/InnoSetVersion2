@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-  ScrollView, Alert, RefreshControl,
+  ScrollView, Alert, RefreshControl, TextInput,
 } from 'react-native';
 import { colors, spacing, radius, typography } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
@@ -47,7 +47,13 @@ export default function AttendanceScreen({ navigation }) {
       const data = await getTodayAttendance();
       setTodayRecord(data.record);
       setBeforeCutoff(data.markedBeforeCutoff);
-      if (data.record) setSelectedStatus(data.record.status);
+      if (data.record) {
+        setSelectedStatus(data.record.status);
+        if (data.record.leaveType) setLeaveType(data.record.leaveType);
+        if (data.record.leaveReason) setLeaveReason(data.record.leaveReason);
+        if (data.record.onDutyLocation) setOnDutyLocation(data.record.onDutyLocation);
+        if (data.record.onDutyPurpose) setOnDutyPurpose(data.record.onDutyPurpose);
+      }
     } catch (e) {
       console.warn('Failed to fetch attendance:', e?.message);
     } finally {
@@ -169,6 +175,16 @@ export default function AttendanceScreen({ navigation }) {
                   <Text style={styles.radioLabel}>{lt.label}</Text>
                 </TouchableOpacity>
               ))}
+              <Text style={[styles.fieldLabel, { marginTop: spacing.sm }]}>Leave Reason</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Reason for leave (optional)..."
+                placeholderTextColor={colors.textMuted}
+                value={leaveReason}
+                onChangeText={setLeaveReason}
+                multiline
+                numberOfLines={2}
+              />
             </View>
           )}
 
@@ -176,9 +192,23 @@ export default function AttendanceScreen({ navigation }) {
           {selectedStatus === 'on_duty' && (
             <View style={styles.subForm}>
               <Text style={styles.fieldLabel}>Duty Location</Text>
-              <View style={styles.inputBox}>
-                <Text style={styles.inputPlaceholder}>e.g. Customer site, Bhopal</Text>
-              </View>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Customer site, Bhopal"
+                placeholderTextColor={colors.textMuted}
+                value={onDutyLocation}
+                onChangeText={setOnDutyLocation}
+              />
+              <Text style={[styles.fieldLabel, { marginTop: spacing.sm }]}>Purpose</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Installation, Service call"
+                placeholderTextColor={colors.textMuted}
+                value={onDutyPurpose}
+                onChangeText={setOnDutyPurpose}
+                multiline
+                numberOfLines={2}
+              />
             </View>
           )}
 
@@ -302,14 +332,15 @@ const styles = StyleSheet.create({
   radioFilled: { backgroundColor: colors.primary },
   radioLabel: { fontSize: 14, color: colors.text },
 
-  inputBox: {
+  textInput: {
     backgroundColor: colors.background,
     borderRadius: radius.sm,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    color: colors.text,
+    fontSize: 14,
   },
-  inputPlaceholder: { color: colors.textMuted, fontSize: 14 },
 
   submitBtn: {
     backgroundColor: colors.primary,

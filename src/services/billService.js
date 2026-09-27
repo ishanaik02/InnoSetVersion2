@@ -61,3 +61,8 @@ export async function getBillHistory(id) {
   const { data } = await api.get(`/bills/${id}/history`);
   return data;
 }
+
+export async function getBillPrint(id) {
+  const { data } = await api.get(`/bills/${id}/print`);
+  return data;
+}

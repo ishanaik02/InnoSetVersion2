@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
 const connectDB = require('./config/db');
 
 const authRoutes = require('./routes/authRoutes');
@@ -31,6 +32,10 @@ const app = express();
 // Without this, express-rate-limit can't correctly read the real client IP
 // from X-Forwarded-For, and throws a ValidationError on every request.
 app.set('trust proxy', 1);
+
+// Railway bills egress — JSON list payloads compress ~80%, so gzip every
+// compressible response before it leaves the process. Placed before routes.
+app.use(compression());
 
 app.use(helmet());
 

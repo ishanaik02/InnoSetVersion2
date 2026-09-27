@@ -73,9 +73,9 @@ export default function AttendanceHistoryScreen() {
         {item.status === 'present' && (
           <View style={styles.detailRow}>
             <Text style={styles.detailText}>
-              🕒 Punch In: {item.punchInTime ? new Date(item.punchInTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'}
+              🕒 Marked at: {item.markedAt ? new Date(item.markedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'}
             </Text>
-            {item.isLate && <Text style={styles.lateText}>⚠️ Marked after 9:30 AM</Text>}
+            {!item.markedBeforeCutoff && <Text style={styles.lateText}>⚠️ Marked after 9:30 AM cutoff</Text>}
           </View>
         )}
 
@@ -102,8 +102,8 @@ export default function AttendanceHistoryScreen() {
           {item.approvedBy?.name && (
             <Text style={styles.approverText}>Approved by {item.approvedBy.name}</Text>
           )}
-          {item.rejectionReason ? (
-            <Text style={styles.rejectionText}>Reason: {item.rejectionReason}</Text>
+          {item.approvalRemarks && item.approvalStatus === 'rejected' ? (
+            <Text style={styles.rejectionText}>Reason: {item.approvalRemarks}</Text>
           ) : null}
         </View>
       </View>

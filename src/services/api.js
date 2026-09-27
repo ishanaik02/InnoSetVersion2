@@ -5,6 +5,8 @@ import { getToken } from '../utils/tokenStorage';
 // Deployed backend on Railway (MongoDB Atlas as the database).
 // Overridable per EAS build profile via EXPO_PUBLIC_API_URL (see eas.json) —
 // e.g. point a "preview" build at a staging backend without editing code.
+// Local-dev LAN IP while testing on a physical device; EXPO_PUBLIC_API_URL
+// (EAS build profiles) still takes precedence when set.
 export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://innosetbackend-production.up.railway.app/api';
 
 const api = axios.create({

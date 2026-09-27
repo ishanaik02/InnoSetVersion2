@@ -25,9 +25,9 @@ export default function EditBillAmountsScreen({ route, navigation }) {
         const b = data.bill;
         setBill(b);
         setConveyance(String(b.conveyanceAmount ?? 0));
-        setDa(String(b.dailyAllowanceAmount ?? 0));
-        setStay(String(b.stayAllowanceAmount ?? 0));
-        setOther(String(b.otherExpensesAmount ?? 0));
+        setDa(String(b.daAmount ?? 0));
+        setStay(String(b.stayAmount ?? 0));
+        setOther(String(b.otherAmount ?? 0));
       } catch (e) {
         Alert.alert('Error', 'Failed to load bill details.');
         navigation.goBack();
@@ -47,9 +47,9 @@ export default function EditBillAmountsScreen({ route, navigation }) {
     try {
       await editBillAmounts(billId, {
         conveyanceAmount: Number(conveyance) || 0,
-        dailyAllowanceAmount: Number(da) || 0,
-        stayAllowanceAmount: Number(stay) || 0,
-        otherExpensesAmount: Number(other) || 0,
+        daAmount: Number(da) || 0,
+        stayAmount: Number(stay) || 0,
+        otherAmount: Number(other) || 0,
         remarks: remarks.trim(),
       });
       Alert.alert('Success', 'Bill amounts updated successfully.', [

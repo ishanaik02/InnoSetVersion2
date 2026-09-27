@@ -202,6 +202,7 @@ exports.createBill = async (req, res) => {
       employee: req.userId,
       branch: branchId,
       billNumber,
+      billDate: new Date(),
       totalAmount,
       conveyanceAmount: conv,
       daAmount: da,
@@ -534,6 +535,87 @@ exports.markBillPaid = async (req, res) => {
     });
 
     res.json({ bill, message: 'Bill marked as paid' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// GET /api/bills/:id/print — clean printable bill data
+// Returns a stripped-down bill object suitable for generating a PDF or
+// printing — no internal IDs, no approvalHistory objects, just the
+// human-readable information a printed bill needs.
+exports.getBillPrint = async (req, res) => {
+  try {
+    const bill = await TADABill.findById(req.params.id)
+      .populate('employee', 'name employeeId grade')
+      .populate('branch', 'name code city address')
+      .populate('trip', 'startLocation destination date tripType conveyance outboundDistanceKm returnDistanceKm ticketAmount');
+
+    if (!bill) return res.status(404).json({ message: 'Bill not found' });
+
+    // Scope check
+    const userRole = req.userRole;
+    const userId = req.userId;
+    const userBranchId = req.userBranchId;
+
+    if (userRole === 'service_engineer' && bill.employee._id.toString() !== userId.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    if (['branch_manager', 'hr'].includes(userRole)) {
+      if (!userBranchId || bill.branch._id.toString() !== userBranchId.toString()) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+    }
+    // SH, account_dept, super_admin: no extra filter
+
+    // Bill can only be printed after all approvals are completed
+    if (!['approved', 'paid'].includes(bill.status) && userRole !== 'super_admin') {
+      return res.status(400).json({ message: 'Bill can only be printed after all approvals are completed' });
+    }
+
+    const employee = bill.employee || {};
+    const branch = bill.branch || {};
+    const trip = bill.trip || {};
+
+    res.json({
+      billNumber: bill.billNumber,
+      status: bill.status,
+      issueDate: bill.billDate ? new Date(bill.billDate).toLocaleDateString('en-IN') : '',
+      employee: {
+        name: employee.name,
+        employeeId: employee.employeeId,
+        grade: employee.grade,
+      },
+      branch: {
+        name: branch.name,
+        code: branch.code,
+      },
+      trip: {
+        startLocation: trip.startLocation,
+        destination: trip.destination,
+        date: trip.date ? new Date(trip.date).toLocaleDateString('en-IN') : '',
+        tripType: trip.tripType,
+        conveyance: trip.conveyance,
+        distanceKm: (trip.outboundDistanceKm || 0) + (trip.returnDistanceKm || 0),
+        ticketAmount: trip.ticketAmount || 0,
+      },
+      amounts: {
+        conveyance: bill.conveyanceAmount || 0,
+        dailyAllowance: bill.daAmount || 0,
+        stay: bill.stayAmount || 0,
+        other: bill.otherAmount || 0,
+        otherDescription: bill.otherDescription || '',
+        total: bill.totalAmount || 0,
+        approvedAmount: bill.approvedAmount != null ? bill.approvedAmount : null,
+      },
+      approvalHistory: (bill.approvalHistory || []).map(h => ({
+        action: h.action,
+        approver: h.approverName || '—',
+        role: h.approverRole || '—',
+        remarks: h.remarks || '',
+        timestamp: h.timestamp ? new Date(h.timestamp).toLocaleString('en-IN') : '',
+      })),
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
