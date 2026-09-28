@@ -2,7 +2,7 @@
   "expo": {
     "name": "InnoSet",
     "slug": "innoset",
-    "version": "3.1.0",
+    "version": "3.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
@@ -21,7 +21,7 @@
     },
     "android": {
       "package": "com.innovativeengineers.innoset",
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
