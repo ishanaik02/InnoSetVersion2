@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const { GRADES } = require('../utils/policyRates');
 
 // GET /api/users — list users scoped by role
 exports.getUsers = async (req, res) => {
@@ -52,6 +53,9 @@ exports.createUser = async (req, res) => {
     }
     if (String(password).length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+    if (grade && !GRADES.includes(grade)) {
+      return res.status(400).json({ message: `Invalid grade "${grade}". Must be one of: ${GRADES.join(', ')}` });
     }
 
     const userRole = req.userRole;
@@ -106,15 +110,19 @@ exports.updateUser = async (req, res) => {
       }
     }
 
+    const updatesSet = {}; // fields for the $set below
     const allowed = ['name', 'email', 'grade', 'isActive'];
     // super_admin can also change role and branch
     if (userRole === 'super_admin') {
       allowed.push('role', 'branch');
     }
     allowed.forEach(f => {
-      if (req.body[f] !== undefined) user[f] = req.body[f];
+      if (req.body[f] !== undefined) updatesSet[f] = req.body[f];
     });
-    await user.save();
+    // $set update instead of save(): full-document validation on a legacy doc
+    // carrying stale enum values (pre-migration grade/role) would throw and
+    // 500 — which made the Deactivate/Activate toggle fail for those users.
+    await User.findByIdAndUpdate(user._id, { $set: updatesSet });
 
     const populated = await User.findById(user._id, '-passwordHash').populate('branch', 'name code city');
     res.json({ user: populated, message: 'User updated' });
@@ -144,8 +152,11 @@ exports.resetPassword = async (req, res) => {
       }
     }
 
-    user.passwordHash = await bcrypt.hash(password, 10);
-    await user.save();
+    // $set instead of save() — a legacy doc with stale enum values must not
+    // block a password change with a whole-document validation error.
+    await User.findByIdAndUpdate(user._id, {
+      $set: { passwordHash: await bcrypt.hash(password, 10) },
+    });
 
     res.json({ message: 'Password reset successfully', employeeId: user.employeeId });
   } catch (err) {

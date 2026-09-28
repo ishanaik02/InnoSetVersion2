@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const Trip = require('../models/Trip');
 const User = require('../models/User');
+const { GRADES } = require('../utils/policyRates');
 
 // GET /api/admin/overview — top-level numbers for the admin dashboard
 exports.getOverview = async (req, res) => {
@@ -243,8 +244,12 @@ exports.resetEngineerPassword = async (req, res) => {
     const engineer = await User.findOne({ _id: req.params.id, role: { $in: ['engineer', 'service_engineer'] } });
     if (!engineer) return res.status(404).json({ message: 'Engineer not found' });
 
-    engineer.passwordHash = await bcrypt.hash(password, 10);
-    await engineer.save();
+    // $set instead of save() — a legacy doc with stale enum values (pre-
+    // migration grade/role) must not block a password change with a
+    // whole-document validation error.
+    await User.findByIdAndUpdate(engineer._id, {
+      $set: { passwordHash: await bcrypt.hash(password, 10) },
+    });
 
     res.json({ message: 'Password reset', employeeId: engineer.employeeId });
   } catch (err) {
@@ -263,6 +268,9 @@ exports.createEngineer = async (req, res) => {
     }
     if (String(password).length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+    }
+    if (grade && !GRADES.includes(grade)) {
+      return res.status(400).json({ message: `Invalid grade "${grade}". Must be one of: ${GRADES.join(', ')}` });
     }
 
     const existing = await User.findOne({ employeeId });

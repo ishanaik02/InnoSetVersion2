@@ -7,6 +7,7 @@ import { colors, spacing, radius, typography } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
 import { getUsers, createUser, updateUser, resetUserPassword } from '../services/userService';
 import { getBranches } from '../services/branchService';
+import { GRADES } from '../utils/policyRates';
 
 const ROLE_LABELS = {
   service_engineer: 'Service Engineer',
@@ -17,7 +18,7 @@ const ROLE_LABELS = {
   super_admin: 'Super Admin',
 };
 
-const GRADES = ['L1', 'L2', 'L3', 'Senior', 'Lead', 'Manager'];
+// GRADES now comes from utils/policyRates (IE1–IE8, matches backend schema)
 
 export default function UserManagementScreen({ navigation }) {
   const { user } = useAuth();
@@ -37,7 +38,7 @@ export default function UserManagementScreen({ navigation }) {
     password: '',
     role: 'service_engineer',
     branchId: user?.branch?._id || '',
-    grade: 'L1',
+    grade: 'IE7',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -97,7 +98,7 @@ export default function UserManagementScreen({ navigation }) {
         email: newUserData.email.trim() || undefined,
         password: password.trim(),
         role,
-        branchId: canManageCrossBranch ? (branchId || branches[0]?._id) : user?.branch?._id,
+        branch: canManageCrossBranch ? (branchId || branches[0]?._id) : user?.branch?._id,
         grade,
       });
       Alert.alert('Success', 'User created successfully.');
@@ -109,7 +110,7 @@ export default function UserManagementScreen({ navigation }) {
         password: '',
         role: 'service_engineer',
         branchId: user?.branch?._id || '',
-        grade: 'L1',
+        grade: 'IE7',
       });
       fetchData();
     } catch (e) {
